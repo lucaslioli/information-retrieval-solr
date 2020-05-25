@@ -1,3 +1,4 @@
+import sys
 import glob
 import xmltodict
 import json
@@ -15,14 +16,19 @@ def delete_collection(collection):
 
 def create_collection(collection):
     print('Creating collection {} ... '.format(collection), end='')
-    requests.get('{}/solr/admin/collections'.format(SOLR_HOST), params={
+    r = requests.get('{}/solr/admin/collections'.format(SOLR_HOST), params={
         'action': 'CREATE',
         'name': collection,
         'numShards': 1})
+
+    if 'error' in r.json():
+        print("\nERROR:",r.json()['error']['msg'])
+        exit()
+    
     print('collection created!')
 
 
-def create_stem_field_type(collection, name='stem_es'):
+def create_stem_field_type(collection, name='stem_pt'):
     print('Creating stemmer field type {}  ... '.format(
         collection), end='')
     requests.post('{}/solr/{}/schema'.format(SOLR_HOST, collection), json={
@@ -74,18 +80,22 @@ def post_documents_solr(collection, json_data):
     r = requests.post(
         '{}/solr/{}/update/json/docs?commit=true'.format(SOLR_HOST, collection), json=json_data)
 
+    if 'error' in r.json():
+        print("\nERROR:",r.json()['error']['msg'])
+        exit()
+
     elapsed_time = r.json()['responseHeader']['QTime']
     return elapsed_time
 
 
 def index_documents(documents_path, collection='informationRetrieval'):
-    files = glob.glob('{}/*.xml'.format(documents_path))
+    files = glob.glob('{}/**/*.xml'.format(documents_path), recursive=True)
 
     delete_collection(collection)
     create_collection(collection)
-    create_schema_field(collection, '_text_es_', 'text_es', stored=False)
+    create_schema_field(collection, '_text_pt_', 'text_pt', stored=False)
     create_copy_field(collection, '_text_', '*')
-    create_copy_field(collection, '_text_es_', '*')
+    create_copy_field(collection, '_text_pt_', '*')
 
     time.sleep(1)
 
@@ -111,4 +121,15 @@ def index_documents(documents_path, collection='informationRetrieval'):
 
 
 if __name__ == "__main__":
-    index_documents('files/documents')
+
+    documents_folder = 'files/documents'
+    collection = 'informationRetrieval'
+
+    if len(sys.argv) >= 2:
+        collection = sys.argv[1]
+
+    if len(sys.argv) >= 3:
+        documents_folder = sys.argv[2]
+
+    index_documents(documents_folder, collection)
+

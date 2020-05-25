@@ -4,7 +4,6 @@ import requests
 
 RESULT_LIMIT = 100
 SOLR_HOST = 'http://localhost:8983'
-COLLECTION = 'informationRetrieval'
 
 
 def get_query(topic, qopt):
@@ -28,8 +27,8 @@ def show_query_result(number, docs, student='francisco_e_lucas'):
         index += 1
 
 
-def execute_queries(collection, qopt):
-    obj = untangle.parse('files/queries.xml')
+def execute_queries(collection, queries, qopt):
+    obj = untangle.parse(queries)
 
     for topic in obj.root.top:
         query = get_query(topic, qopt)
@@ -39,18 +38,31 @@ def execute_queries(collection, qopt):
                             'q': query,
                             'fl': '*, score',
                             'rows': RESULT_LIMIT,
-                            'df': '_text_es_'
+                            'df': '_text_pt_'
                         })
+        if 'error' in r.json():
+            print("\nERROR:",r.json()['error']['msg'])
+            exit()
+
         result = r.json()
         docs = result['response']['docs']
 
         show_query_result(topic.num.cdata, docs)
 
-
+# python3 execute_queries.py folhaSP queries.xml > results.txt
 if __name__ == "__main__":
+
+    queries = 'files/queries.xml'
+    collection = 'informationRetrieval'
     qopt = "title"
 
-    if(len(sys.argv) == 2):
-        qopt = sys.argv[1]
+    if len(sys.argv) >= 2:
+        collection = sys.argv[1]
 
-    execute_queries(COLLECTION, qopt)
+    if len(sys.argv) >= 3:
+        queries = sys.argv[2]
+
+    if len(sys.argv) >= 4:
+        qopt = sys.argv[3]
+
+    execute_queries(collection, queries, qopt)
