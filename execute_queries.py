@@ -9,15 +9,15 @@ SOLR_HOST = 'http://localhost:8983'
 def get_query(topic, qopt):
     query = topic.title.cdata
 
-    if(qopt == "desc"):
+    if("desc" in qopt):
         query = query + " " + topic.desc.cdata
     
-    if(qopt == "narr"):
-        query = query + " " + topic.desc.cdata  + " " + topic.narr.cdata
+    if("narr" in qopt):
+        query = query + " " + topic.narr.cdata
     
     return query.replace(':', '')
 
-def show_query_result(number, docs, student='francisco_e_lucas'):
+def show_query_result(number, docs, student='if-solr'):
     index = 0
     for doc in docs:
         doc_id = doc['docid']
@@ -27,7 +27,7 @@ def show_query_result(number, docs, student='francisco_e_lucas'):
         index += 1
 
 
-def execute_queries(collection, queries, qopt):
+def execute_queries(collection, queries, qopt, lang):
     obj = untangle.parse(queries)
 
     for topic in obj.root.top:
@@ -38,7 +38,7 @@ def execute_queries(collection, queries, qopt):
                             'q': query,
                             'fl': '*, score',
                             'rows': RESULT_LIMIT,
-                            'df': '_text_pt_'
+                            'df': lang # '_text_es_'
                         })
         if 'error' in r.json():
             print("\nERROR:",r.json()['error']['msg'])
@@ -49,20 +49,26 @@ def execute_queries(collection, queries, qopt):
 
         show_query_result(topic.num.cdata, docs)
 
-# python3 execute_queries.py folhaSP queries.xml > results.txt
+# python3 execute_queries.py folhaSP pt queries.xml title > results.txt
 if __name__ == "__main__":
 
     queries = 'files/queries.xml'
     collection = 'informationRetrieval'
-    qopt = "title"
+    qopt = 'title'
+    lang = '_text_es_'
 
     if len(sys.argv) >= 2:
         collection = sys.argv[1]
 
     if len(sys.argv) >= 3:
-        queries = sys.argv[2]
+        lang = '_text_{}_'.format(sys.argv[2])
 
     if len(sys.argv) >= 4:
-        qopt = sys.argv[3]
+        queries = sys.argv[3]
 
-    execute_queries(collection, queries, qopt)
+    if len(sys.argv) >= 5:
+        qopt = sys.argv[4]
+
+    execute_queries(collection, queries, qopt, lang)
+    
+    exit()
