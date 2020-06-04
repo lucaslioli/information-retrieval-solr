@@ -22,12 +22,15 @@ $ python3 preprocess_documents.py files/documents
 ```
 
 ### 2. Indexing documents
-
+**Choose one of the commands below**. It's optional to inform collection name, language (es, pt, ...) and documents folder, but you have to keep that same order. The default options are ```informationRetrieval```, ```es``` and ```files/documents/```. 
 ```
 $ python3 index_documents.py
+$ python3 index_documents.py collectionName language /home/user/dataset/
 ```
 
 ### 3. Executing queries
+**Choose one of the commands below**. It's optional to inform collection name, language (es, pt, ...), queries file and option to create the querie, but you have to keep that same orders. The default options are ```informationRetrieval```, ```es```, ```files/queries.xml``` and ```title```. The possible options to create the queries are ```title```, ```desc```, ```narr```, or ```desc-narr```, but all of them will consider the title.
 ```
 $ python3 execute_queries.py > results.txt
+$ python3 execute_queries.py collectionName language queries.xml title > results.txt
 ```
