@@ -14,24 +14,79 @@ def delete_collection(collection):
         'name': collection})
 
 
+def delete_field(collection, name, field="field-type", has_copy=False):
+    if has_copy == True:
+        r = requests.post('{}/solr/{}/schema'.format(SOLR_HOST, collection), json={
+            'delete-copy-field': { "dest": name, "source": "*" } })
+
+    r = requests.post('{}/solr/{}/schema'.format(SOLR_HOST, collection), json={
+        'delete-{}'.format(field): { "name": name } })
+
+
+def field_existis(collection, name, field="fieldtypes"):
+    get_field = requests.get('{}/solr/{}/schema/{}/{}'\
+        .format(SOLR_HOST, collection, field, name)).json()
+
+    if(get_field['responseHeader']['status'] == 0):
+        return True
+
+    return False
+
+
 def create_collection(collection):
     print('Creating collection {} ... '.format(collection), end='')
     r = requests.get('{}/solr/admin/collections'.format(SOLR_HOST), params={
         'action': 'CREATE',
         'name': collection,
-        'numShards': 1})
+        'numShards': 1}).json()
 
-    if 'error' in r.json():
-        print("\nERROR:",r.json()['error']['msg'])
+    if 'error' in r:
+        print("\nERROR:",r['error']['msg'])
         exit()
     
     print('collection created!')
 
 
+def create_similarity_field_type(collection):
+    print('Creating similarity field type {}  ... '.format(
+        collection), end='')
+
+    name = "similarity_field"
+
+    if(field_existis(collection, name, "fieldtypes")):
+        delete_field(collection, name, "field-type")
+
+    r = requests.post('{}/solr/{}/schema'.format(SOLR_HOST, collection), json={
+        'add-field-type': {
+            "name": name,
+            "class": "solr.TextField",
+            "similarity": {
+                "class": "solr.DFRSimilarityFactory",
+                "basicModel": "I(F)",
+                "afterEffect": "B",
+                "normalization": "H3",
+                "mu": 900
+            }
+        },
+    }).json()
+
+    if 'error' in r:
+        print("\nERROR:",r['error']['msg'])
+        exit()
+
+    print('similarity field created!')
+
+
 def create_stem_field_type(collection, name='stem_es'):
     print('Creating stemmer field type {}  ... '.format(
         collection), end='')
-    requests.post('{}/solr/{}/schema'.format(SOLR_HOST, collection), json={
+
+    if(field_existis(collection, name, "fieldtypes")):
+        delete_field(collection, name, "field-type")
+
+    lang = 'Spanish' if name == 'stem_es' else 'Portuguese'
+
+    r = requests.post('{}/solr/{}/schema'.format(SOLR_HOST, collection), json={
         'add-field-type': {
             "name": name,
             "class": "solr.TextField",
@@ -40,51 +95,71 @@ def create_stem_field_type(collection, name='stem_es'):
                 "tokenizer": {"class": "solr.StandardTokenizerFactory"},
                 "filters": [
                     {"class": "solr.LowerCaseFilterFactory"},
-                    {"class": "solr.SpanishLightStemFilterFactory"},
+                    {"class": "solr.{}LightStemFilterFactory".format(lang)},
                     {"class": "solr.StopFilterFactory",
                      "words": "stopwords.txt",
                      "ignoreCase": "true"},
                 ]}
         },
-    })
+    }).json()
+
+    if 'error' in r:
+        print("\nERROR:",r['error']['msg'])
+        exit()
+
     print('stemmer field created!')
 
 
 def create_schema_field(collection, name, field_type, stored=True):
     print('Creating field ({}: {}) in {} ... '.format(
         name, field_type, collection), end='')
-    requests.post('{}/solr/{}/schema'.format(SOLR_HOST, collection), json={
+
+    if(field_existis(collection, name, "fields")):
+        delete_field(collection, name, "field", True)
+
+    r = requests.post('{}/solr/{}/schema'.format(SOLR_HOST, collection), json={
         "add-field": {
             "name": name,
             "type": field_type,
             "stored": stored,
             "indexed": True,
             "multiValued": True}
-    })
+    }).json()
+
+    if 'error' in r:
+        print("\nERROR:",r['error']['msg'])
+        exit()
+
     print('field created!')
 
 
 def create_copy_field(collection, dest='_text_', source='*'):
     print('Create copy field in {} from {} to {}  ... '.format(
         collection, source, dest), end='')
-    requests.post('{}/solr/{}/schema'.format(SOLR_HOST, collection), json={
+
+    r = requests.post('{}/solr/{}/schema'.format(SOLR_HOST, collection), json={
         'add-copy-field': {
             'dest': dest,
             'source': source,
         },
-    })
+    }).json()
+
+    if 'error' in r:
+        print("\nERROR:",r['error']['msg'])
+        exit()
+
     print('copy field created!')
 
 
 def post_documents_solr(collection, json_data):
-    r = requests.post(
-        '{}/solr/{}/update/json/docs?commit=true'.format(SOLR_HOST, collection), json=json_data)
+    r = requests.post('{}/solr/{}/update/json/docs?commit=true'\
+        .format(SOLR_HOST, collection), json=json_data).json()
 
-    if 'error' in r.json():
-        print("\nERROR:",r.json()['error']['msg'])
+    if 'error' in r:
+        print("\nERROR:",r['error']['msg'])
         exit()
 
-    elapsed_time = r.json()['responseHeader']['QTime']
+    elapsed_time = r['responseHeader']['QTime']
     return elapsed_time
 
 
@@ -98,6 +173,7 @@ def index_documents(documents_path, collection='informationRetrieval', lang='es'
 
     delete_collection(collection)
     create_collection(collection)
+    create_similarity_field_type(collection)
     create_stem_field_type(collection, 'stem_{}'.format(lang))
     # create_schema_field(collection, 'text', 'text_{}'.format(lang))	
     # create_schema_field(collection, 'title', 'text_{}'.format(lang))
