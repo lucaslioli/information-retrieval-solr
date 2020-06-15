@@ -14,7 +14,7 @@ def delete_collection(collection):
         'name': collection})
 
 
-def delete_field(collection, name, field="field-type", has_copy=False):
+def delete_field(collection, name, field='field-type', has_copy=False):
     if has_copy == True:
         r = requests.post('{}/solr/{}/schema'.format(SOLR_HOST, collection), json={
             'delete-copy-field': { "dest": name, "source": "*" } })
@@ -23,7 +23,7 @@ def delete_field(collection, name, field="field-type", has_copy=False):
         'delete-{}'.format(field): { "name": name } })
 
 
-def field_existis(collection, name, field="fieldtypes"):
+def field_existis(collection, name, field='fieldtypes'):
     get_field = requests.get('{}/solr/{}/schema/{}/{}'\
         .format(SOLR_HOST, collection, field, name)).json()
 
@@ -57,7 +57,7 @@ def create_stem_field_type(collection, name='stem_es'):
     lang = 'Spanish' if name == 'stem_es' else 'Portuguese'
 
     r = requests.post('{}/solr/{}/schema'.format(SOLR_HOST, collection), json={
-        'add-field-type': {
+        "add-field-type": {
             "name": name,
             "class": "solr.TextField",
             "positionIncrementGap": "100",
@@ -78,6 +78,34 @@ def create_stem_field_type(collection, name='stem_es'):
         exit()
 
     print('stemmer field created!')
+
+
+def create_ngram_field_type(collection, name='text_ngram', minSize=1, maxSize=2):
+    print('Creating ngram field type {}  ... '.format(
+        name, collection), end='')
+
+    if(field_existis(collection, "text", "fieldtypes")):
+        delete_field(collection, "text", "field-type")
+
+    r = requests.post('{}/solr/{}/schema'.format(SOLR_HOST, collection), json={
+        "add-field-type": {
+            "name": name,
+            "class": "solr.TextField",
+            "analyzer": {
+                "tokenizer": {
+                    "class": "solr.NGramTokenizerFactory",
+                    "minGramSize": minSize,
+                    "maxGramSize": maxSize
+                }
+            }
+        }
+    }).json()
+
+    if 'error' in r:
+        print("\nERROR:",r['error']['msg'])
+        exit()
+
+    print('ngram field created!')
 
 
 def create_schema_field(collection, name, field_type, stored=True):
@@ -143,8 +171,9 @@ def index_documents(documents_path, collection='informationRetrieval', lang='es'
 
     delete_collection(collection)
     create_collection(collection)
-    create_stem_field_type(collection, 'stem_{}'.format(lang))
-    # create_schema_field(collection, 'text', 'text_{}'.format(lang))	
+    create_ngram_field_type(collection, 'text_ngram', 3, 6)
+    # create_stem_field_type(collection, 'stem_{}'.format(lang))
+    # create_schema_field(collection, 'text', 'text_{}'.format(lang))
     # create_schema_field(collection, 'title', 'text_{}'.format(lang))
     create_schema_field(collection, '_text_{}_'.format(lang), 'text_{}'.format(lang), stored=False)
     create_copy_field(collection, '_text_', '*')
