@@ -47,36 +47,6 @@ def create_collection(collection):
     print('collection created!')
 
 
-def create_similarity_field_type(collection):
-    print('Creating similarity field type {}  ... '.format(
-        collection), end='')
-
-    name = "similarity_field"
-
-    if(field_existis(collection, name, "fieldtypes")):
-        delete_field(collection, name, "field-type")
-
-    r = requests.post('{}/solr/{}/schema'.format(SOLR_HOST, collection), json={
-        'add-field-type': {
-            "name": name,
-            "class": "solr.TextField",
-            "similarity": {
-                "class": "solr.DFRSimilarityFactory",
-                "basicModel": "I(F)",
-                "afterEffect": "B",
-                "normalization": "H3",
-                "mu": 900
-            }
-        },
-    }).json()
-
-    if 'error' in r:
-        print("\nERROR:",r['error']['msg'])
-        exit()
-
-    print('similarity field created!')
-
-
 def create_stem_field_type(collection, name='stem_es'):
     print('Creating stemmer field type {}  ... '.format(
         collection), end='')
@@ -173,7 +143,6 @@ def index_documents(documents_path, collection='informationRetrieval', lang='es'
 
     delete_collection(collection)
     create_collection(collection)
-    create_similarity_field_type(collection)
     create_stem_field_type(collection, 'stem_{}'.format(lang))
     # create_schema_field(collection, 'text', 'text_{}'.format(lang))	
     # create_schema_field(collection, 'title', 'text_{}'.format(lang))
