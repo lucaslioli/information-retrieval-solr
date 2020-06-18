@@ -28,6 +28,11 @@ $ python3 index_documents.py
 $ python3 index_documents.py collectionName language /home/user/dataset/
 ```
 
+#### 2.1 Index config
+
+You can comment or uncomment lines (174-180) in ```index_documents``` function to enable N-Gram Tokenizer, Stem, or copy fields, as you can also add new fields using the same functions (```create_ngram_field_type```, ```create_stem_field_type```, ```create_schema_field```, ```create_copy_field```).
+
+
 ### 3. Executing queries
 **Choose one of the commands below**. It's optional to inform collection name, language (es, pt, ...), queries file and option to create the querie, but you have to keep that same orders. The default options are ```informationRetrieval```, ```es```, ```files/queries.xml``` and ```title```. The possible options to create the queries are ```title```, ```desc```, ```narr```, or ```desc-narr```, but all of them will consider the title.
 ```

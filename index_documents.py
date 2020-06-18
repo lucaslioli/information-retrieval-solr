@@ -171,8 +171,8 @@ def index_documents(documents_path, collection='informationRetrieval', lang='es'
 
     delete_collection(collection)
     create_collection(collection)
-    create_ngram_field_type(collection, 'text_ngram', 3, 6)
-    # create_stem_field_type(collection, 'stem_{}'.format(lang))
+    # create_ngram_field_type(collection, 'text_ngram', 3, 6)
+    create_stem_field_type(collection, 'stem_{}'.format(lang))
     # create_schema_field(collection, 'text', 'text_{}'.format(lang))
     # create_schema_field(collection, 'title', 'text_{}'.format(lang))
     create_schema_field(collection, '_text_{}_'.format(lang), 'text_{}'.format(lang), stored=False)
